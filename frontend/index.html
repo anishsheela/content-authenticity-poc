@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify Authenticity</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 18px;
+      background: #f5f4f0;
+      color: #1a1a1a;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 28px;
+      background: #fff;
+      border-bottom: 2px solid #d0d0c8;
+      flex-shrink: 0;
+    }
+    .nav-brand { font-weight: 700; font-size: 1.1rem; }
+    .nav-link {
+      font-size: 1rem;
+      color: #333;
+      text-decoration: none;
+      border: 2px solid #999;
+      border-radius: 6px;
+      padding: 5px 14px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .nav-link:hover { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .hero p {
+      color: #3a3a3a;
+      font-size: 1.05rem;
+      text-align: center;
+      margin-bottom: 24px;
+      max-width: 420px;
+    }
+
+    /* ── Card — changes colour on result ── */
+    .card {
+      background: #fff;
+      border: 2px solid #c8c8c0;
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      transition: border-color 0.25s, background 0.25s;
+    }
+    .card.authentic         { background: #e8f8ef; border-color: #2e8a50; }
+    .card.possibly_modified { background: #fff8e0; border-color: #c47d00; }
+    .card.not_found         { background: #fdecea; border-color: #c0392b; }
+    .card.signature_invalid { background: #fdecea; border-color: #c0392b; }
+
+    /* ── Upload state ── */
+    .drop-zone {
+      border: 2px dashed #999;
+      border-radius: 10px;
+      padding: 32px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #2a6b40; background: #f0f8f3; }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone.loading { pointer-events: none; border-style: solid; border-color: #999; }
+
+    /* idle content */
+    .dz-idle .icon  { font-size: 2rem; margin-bottom: 8px; }
+    .dz-idle .label { font-size: 1rem; color: #222; font-weight: 500; }
+    .dz-idle .sub   { font-size: 0.9rem; color: #555; margin-top: 5px; }
+
+    /* loading content */
+    .dz-loading { display: none; }
+    .dz-loading.show { display: block; }
+    .dz-loading .filename { font-size: 1rem; color: #333; font-weight: 600; margin-bottom: 12px; }
+    .dz-loading .checking { font-size: 0.95rem; color: #555; margin-top: 10px; }
+
+    .spinner-ring {
+      width: 36px; height: 36px;
+      border: 3px solid #ddd;
+      border-top-color: #1a1a1a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result state ── */
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .status-icon { font-size: 1.8rem; flex-shrink: 0; }
+    .status-text { font-weight: 700; font-size: 1.2rem; }
+    .status-sub  { font-size: 0.95rem; color: #333; margin-top: 3px; }
+
+    .divider { border: none; border-top: 2px solid rgba(0,0,0,0.12); margin: 14px 0; }
+
+    .meta-row   { display: flex; gap: 10px; margin-bottom: 8px; align-items: baseline; flex-wrap: wrap; }
+    .meta-label { font-size: 0.95rem; color: #444; min-width: 110px; font-weight: 600; }
+    .meta-value { font-size: 1rem; color: #1a1a1a; word-break: break-all; }
+
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.9rem; font-weight: 700; }
+    .badge-green  { background: #c4efd0; color: #1a5c2e; }
+    .badge-yellow { background: #ffe9a0; color: #7a4a00; }
+
+    .assertion-toggle {
+      font-size: 0.95rem; color: #2a4a8a; cursor: pointer;
+      margin-top: 12px; text-decoration: underline; font-weight: 600;
+    }
+    pre.assertion {
+      display: none;
+      background: #eeeeed; border: 1px solid #bbb; border-radius: 6px;
+      padding: 10px; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all;
+      max-height: 130px; overflow-y: auto; margin-top: 8px; color: #333;
+    }
+    pre.assertion.show { display: block; }
+
+    .reset-btn {
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      background: #444;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .reset-btn:hover { background: #222; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">ContentVerify</span>
+  <a class="nav-link" href="/creator.html">Creator portal →</a>
+</nav>
+
+<div class="hero">
+  <h1>Is this the real one?</h1>
+  <p>Upload an image or document — it will be checked immediately.</p>
+
+  <div class="card" id="card">
+
+    <!-- ── Upload state ── -->
+    <div id="upload-state">
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff,.pdf"
+               onchange="onFileChosen(this)" />
+
+        <div class="dz-idle" id="dz-idle">
+          <div class="icon">📂</div>
+          <div class="label">Drop a file here or click to browse</div>
+          <div class="sub">JPEG · PNG · WebP · GIF · PDF</div>
+        </div>
+
+        <div class="dz-loading" id="dz-loading">
+          <div class="filename" id="dz-filename"></div>
+          <div class="spinner-ring"></div>
+          <div class="checking">Checking…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Result state (hidden until result arrives) ── -->
+    <div id="result-state" style="display:none">
+      <div class="result-status">
+        <div class="status-icon" id="r-icon"></div>
+        <div>
+          <div class="status-text" id="r-text"></div>
+          <div class="status-sub"  id="r-sub"></div>
+        </div>
+      </div>
+      <hr class="divider" id="r-divider" style="display:none" />
+      <div id="r-details"></div>
+      <button class="reset-btn" onclick="resetVerify()">Check another file</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = "";
+
+// ── Drag-and-drop ──
+const dz = document.getElementById("drop-zone");
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("dragover"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("dragover"));
+dz.addEventListener("drop", e => {
+  e.preventDefault(); dz.classList.remove("dragover");
+  if (e.dataTransfer.files[0]) verify(e.dataTransfer.files[0]);
+});
+
+function onFileChosen(input) {
+  if (input.files[0]) verify(input.files[0]);
+}
+
+// ── Main verify flow ──
+async function verify(file) {
+  // Show loading state inside the drop zone
+  document.getElementById("dz-filename").textContent = file.name;
+  document.getElementById("dz-idle").style.display    = "none";
+  document.getElementById("dz-loading").classList.add("show");
+  dz.classList.add("loading");
+
+  const fd = new FormData();
+  fd.append("file", file);
+
+  try {
+    const res  = await fetch(`${API}/api/verify`, { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Verification failed.");
+    renderResult(data);
+  } catch (e) {
+    renderError(e.message);
+  }
+}
+
+function resetVerify() {
+  // Reset to upload state
+  document.getElementById("file-input").value = "";
+  document.getElementById("dz-idle").style.display = "";
+  document.getElementById("dz-loading").classList.remove("show");
+  dz.classList.remove("loading");
+
+  document.getElementById("upload-state").style.display = "";
+  document.getElementById("result-state").style.display  = "none";
+  document.getElementById("card").className = "card";
+}
+
+// ── Render helpers ──
+const STATUS_MAP = {
+  authentic:         { icon: "✅", text: "Authentic",        sub: "Matches the registered original exactly." },
+  possibly_modified: { icon: "⚠️", text: "Possibly altered", sub: "Similar to a registered original, but differences were detected." },
+  not_found:         { icon: "❌", text: "Not recognised",    sub: "No matching registered content found." },
+  signature_invalid: { icon: "🚨", text: "Signature invalid", sub: "Content matched but the signature failed verification." },
+};
+
+function renderResult(data) {
+  const s = STATUS_MAP[data.status] || { icon: "❓", text: data.status, sub: "" };
+
+  document.getElementById("r-icon").textContent = s.icon;
+  document.getElementById("r-text").textContent = s.text;
+  document.getElementById("r-sub").textContent  = s.sub;
+
+  const divider = document.getElementById("r-divider");
+  const details = document.getElementById("r-details");
+
+  if (data.status === "not_found") {
+    divider.style.display = "none";
+    details.innerHTML = "";
+  } else {
+    divider.style.display = "";
+    let html = "";
+    if (data.creator) {
+      const handle = data.creator.handle
+        ? ` <span style="color:#444;font-size:1rem">${data.creator.handle}</span>` : "";
+      html += row("Creator", data.creator.name + handle);
+    }
+    if (data.title)         html += row("Title", esc(data.title));
+    if (data.registered_at) html += row("Registered", new Date(data.registered_at).toLocaleString());
+    if (data.hamming_distance != null) {
+      const pct = (data.similarity_score * 100).toFixed(1);
+      const cls = data.similarity_score >= 0.87 ? "badge-green" : "badge-yellow";
+      html += row("Similarity", `<span class="badge ${cls}">${pct}% match</span> &nbsp;${data.hamming_distance}/64 bits differ`);
+    }
+    html += row("Signature", data.signature_valid
+      ? '<span class="badge badge-green">✓ Valid</span>'
+      : '<span style="color:#c0392b;font-weight:700">✗ Invalid</span>');
+    if (data.signed_assertion) {
+      html += `<div class="assertion-toggle" onclick="toggleAssertion()">Show signed assertion (GPG verifiable)</div>`;
+      html += `<pre class="assertion" id="assertion-pre">${esc(data.signed_assertion)}</pre>`;
+    }
+    details.innerHTML = html;
+  }
+
+  document.getElementById("upload-state").style.display = "none";
+  document.getElementById("result-state").style.display  = "";
+  document.getElementById("card").className = "card " + (data.status || "not_found");
+}
+
+function renderError(msg) {
+  document.getElementById("r-icon").textContent = "⚠️";
+  document.getElementById("r-text").textContent = "Error";
+  document.getElementById("r-sub").textContent  = msg;
+  document.getElementById("r-divider").style.display = "none";
+  document.getElementById("r-details").innerHTML = "";
+  document.getElementById("upload-state").style.display = "none";
+  document.getElementById("result-state").style.display  = "";
+  document.getElementById("card").className = "card not_found";
+}
+
+function row(l, v) {
+  return `<div class="meta-row"><span class="meta-label">${l}</span><span class="meta-value">${v}</span></div>`;
+}
+
+function toggleAssertion() {
+  document.getElementById("assertion-pre").classList.toggle("show");
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+</script>
+</body>
+</html>

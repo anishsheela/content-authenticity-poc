@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creator Portal — ContentVerify</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 18px;
+      background: #0f0f11;
+      color: #e8e8ea;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 28px;
+      border-bottom: 2px solid #2a2a38;
+    }
+    .nav-brand { font-weight: 700; font-size: 1.1rem; letter-spacing: -0.01em; }
+    .nav-brand span { color: #aaa; font-weight: 400; }
+    .nav-user { font-size: 1rem; color: #bbb; }
+    .nav-user strong { color: #e8e8ea; }
+    .nav-link {
+      font-size: 1rem; color: #bbb; text-decoration: none;
+      border: 2px solid #444; border-radius: 6px; padding: 5px 14px;
+      font-weight: 600; transition: all 0.15s;
+    }
+    .nav-link:hover { background: #e8e8ea; color: #0f0f11; border-color: #e8e8ea; }
+
+    .page {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      overflow: auto;
+    }
+
+    /* ── Shared card ── */
+    .card {
+      background: #16161d;
+      border: 2px solid #32323f;
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; }
+    .card-sub   { font-size: 0.95rem; color: #bbb; margin-bottom: 18px; }
+
+    .field { margin-bottom: 12px; }
+    label  { display: block; font-size: 1rem; color: #ccc; margin-bottom: 6px; font-weight: 500; }
+    input[type="text"] {
+      width: 100%;
+      background: #0f0f11;
+      border: 2px solid #32323f;
+      border-radius: 7px;
+      color: #e8e8ea;
+      font-size: 1rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: #7070e8; }
+
+    /* file drop */
+    .drop-zone {
+      border: 2px dashed #444458;
+      border-radius: 8px;
+      padding: 30px 16px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #7070e8; background: #14141c; }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .drop-zone .dz-label  { font-size: 1rem; color: #ddd; font-weight: 500; }
+    .drop-zone .dz-hint   { font-size: 0.9rem; color: #aaa; margin-top: 6px; }
+    .drop-zone .dz-chosen { font-size: 1rem; color: #c8c8f8; margin-top: 8px; font-weight: 600; }
+
+    /* buttons */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 14px; border: none; border-radius: 8px;
+      font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: background 0.15s;
+    }
+    .btn-primary { background: #5b5bd6; color: #fff; }
+    .btn-primary:hover { background: #6c6ce0; }
+    .btn-primary:disabled { background: #2a2a3a; color: #888; cursor: not-allowed; }
+    .btn-secondary {
+      background: transparent; color: #ccc;
+      border: 2px solid #3a3a4a;
+      margin-top: 10px;
+    }
+    .btn-secondary:hover { color: #fff; border-color: #666; }
+    .btn-ghost {
+      background: transparent; color: #9090f0;
+      border: 2px solid #3a3a5a;
+      margin-top: 10px;
+    }
+    .btn-ghost:hover { background: #14143a; }
+    .btn-success { background: #1e7a42; color: #fff; }
+    .btn-success:hover { background: #23904e; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .spinner.show { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Landing state ── */
+    #state-landing { text-align: center; }
+    .landing-icon  { font-size: 2.4rem; margin-bottom: 12px; }
+    .landing-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+    .landing-sub   { font-size: 1rem; color: #bbb; margin-bottom: 24px; max-width: 380px; }
+    .auth-options  { display: flex; flex-direction: column; gap: 10px; }
+    .auth-opt {
+      background: #16161d;
+      border: 2px solid #32323f;
+      border-radius: 10px;
+      padding: 16px 20px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .auth-opt:hover { border-color: #7070e8; }
+    .auth-opt .opt-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 3px; }
+    .auth-opt .opt-sub   { font-size: 0.95rem; color: #aaa; }
+
+    /* ── Post-register key download ── */
+    .key-warn {
+      background: #2a1800;
+      border: 2px solid #9a6000;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      color: #ffcc66;
+      margin-bottom: 14px;
+    }
+    .key-warn strong { display: block; margin-bottom: 3px; font-size: 1rem; }
+
+    .key-download {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .dl-btn {
+      flex: 1;
+      padding: 12px;
+      background: #1e1e28;
+      border: 2px solid #3a3a50;
+      border-radius: 7px;
+      color: #d0d0f8;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+      text-decoration: none;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .dl-btn:hover { background: #28283a; }
+
+    .fp-label { font-size: 0.9rem; color: #bbb; margin-bottom: 6px; }
+    .fp-block {
+      background: #0f0f11;
+      border: 2px solid #32323f;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: #ccc;
+      word-break: break-all;
+      margin-bottom: 16px;
+    }
+
+    /* ── Dashboard ── */
+    #state-dashboard { width: 100%; max-width: 540px; }
+    .creator-header {
+      background: #16161d;
+      border: 2px solid #32323f;
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .creator-avatar {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #5b5bd6, #8b5cf6);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .creator-info .name   { font-weight: 700; font-size: 1.1rem; }
+    .creator-info .handle { font-size: 0.95rem; color: #bbb; margin-top: 2px; }
+    .creator-info .fp     { font-size: 0.82rem; color: #999; font-family: monospace; margin-top: 4px; }
+
+    .sign-result {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 8px;
+      display: none;
+    }
+    .sign-result.show { display: block; }
+    .sign-result.ok   { background: #0c2014; border: 2px solid #1e6632; }
+    .sign-result.err  { background: #200c0c; border: 2px solid #6e1a1a; }
+
+    .kv { display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .k  { color: #bbb; font-size: 0.95rem; min-width: 130px; font-weight: 600; }
+    .v  { color: #e0e0e0; font-size: 0.95rem; word-break: break-all; }
+
+    pre.asc {
+      background: #0f0f11;
+      border: 2px solid #32323f;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 160px;
+      overflow-y: auto;
+      margin-top: 12px;
+      color: #ccc;
+    }
+
+    .dl-assertion {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 7px 14px;
+      background: #1e1e28;
+      border: 2px solid #3a3a50;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #d0d0f8;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .dl-assertion:hover { background: #28283a; }
+
+    .error-msg { font-size: 1rem; color: #ff7070; margin-top: 10px; font-weight: 600; }
+
+    hr.sep { border: none; border-top: 2px solid #1e1e26; margin: 20px 0; }
+
+    .logout-link {
+      font-size: 1rem;
+      color: #aaa;
+      cursor: pointer;
+      margin-top: 14px;
+      text-align: center;
+      text-decoration: underline;
+    }
+    .logout-link:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">ContentVerify <span>/ Creator Portal</span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="nav-user" id="nav-user"></div>
+    <a class="nav-link" href="/">← Public portal</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- ── STATE: Landing ── -->
+  <div id="state-landing">
+    <div class="landing-icon">🔐</div>
+    <div class="landing-title">Creator Portal</div>
+    <div class="landing-sub">Register your identity and sign your content so fans can verify it's really you.</div>
+    <div class="auth-options">
+      <div class="auth-opt" onclick="showState('login')">
+        <div class="opt-title">Sign in with private key</div>
+        <div class="opt-sub">Upload your <code>.asc</code> private key file to continue</div>
+      </div>
+      <div class="auth-opt" onclick="showState('register')">
+        <div class="opt-title">Register as a new creator</div>
+        <div class="opt-sub">First time here? Get your keypair and identity set up</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STATE: Login ── -->
+  <div id="state-login" style="display:none">
+    <div class="card">
+      <div class="card-title">Sign in</div>
+      <div class="card-sub">Upload your private key file to authenticate.</div>
+      <div class="field">
+        <label>Private key file (.asc)</label>
+        <div class="drop-zone" id="login-dz">
+          <input type="file" id="login-key-file" accept=".asc,.txt,application/pgp-keys"
+                 onchange="onLoginFile(this)" />
+          <div class="dz-label">Drop your private_key.asc here or click to browse</div>
+          <div class="dz-hint">Only the fingerprint is read — the key is never stored again</div>
+          <div class="dz-chosen" id="login-chosen"></div>
+        </div>
+      </div>
+      <div class="error-msg" id="login-err"></div>
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()" disabled style="margin-top:8px">
+        <span class="spinner" id="login-spinner"></span>
+        <span>Sign in</span>
+      </button>
+      <button class="btn btn-secondary" onclick="showState('landing')">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── STATE: Register ── -->
+  <div id="state-register" style="display:none">
+    <div class="card">
+      <div class="card-title">Register</div>
+      <div class="card-sub">Set up your creator identity. A keypair will be generated for you.</div>
+      <div class="field">
+        <label>Full name *</label>
+        <input type="text" id="reg-name" placeholder="Taylor Swift" />
+      </div>
+      <div class="field">
+        <label>Handle <span style="color:#bbb">(optional)</span></label>
+        <input type="text" id="reg-handle" placeholder="@taylorswift" />
+      </div>
+      <div class="error-msg" id="reg-err"></div>
+      <button class="btn btn-primary" id="reg-btn" onclick="doRegister()" style="margin-top:4px">
+        <span class="spinner" id="reg-spinner"></span>
+        <span>Create my identity</span>
+      </button>
+      <button class="btn btn-secondary" onclick="showState('landing')">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── STATE: Post-register (download keys + Next) ── -->
+  <div id="state-post-register" style="display:none">
+    <div class="card">
+      <div class="card-title">✅ Identity created</div>
+      <div class="card-sub">Download your private key — you'll need it to sign back in.</div>
+
+      <div class="key-warn">
+        <strong>⚠️ Save your private key now</strong>
+        This is the only time it will be offered for download. Without it you cannot log back in.
+      </div>
+
+      <div class="key-download">
+        <a class="dl-btn" id="dl-private" download="private_key.asc">⬇ private_key.asc</a>
+        <a class="dl-btn" id="dl-public"  download="public_key.asc">⬇ public_key.asc</a>
+      </div>
+
+      <div class="fp-label">PGP fingerprint</div>
+      <div class="fp-block" id="post-fp"></div>
+
+      <button class="btn btn-success" onclick="goToDashboard()">
+        Next: Sign content →
+      </button>
+    </div>
+  </div>
+
+  <!-- ── STATE: Dashboard ── -->
+  <div id="state-dashboard" style="display:none">
+    <div class="creator-header">
+      <div class="creator-avatar" id="dash-avatar"></div>
+      <div class="creator-info">
+        <div class="name" id="dash-name"></div>
+        <div class="handle" id="dash-handle"></div>
+        <div class="fp" id="dash-fp"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sign content</div>
+      <div class="card-sub">Upload an image or PDF to fingerprint and sign it with your key.</div>
+
+      <div class="field">
+        <label>Title <span style="color:#bbb">(optional)</span></label>
+        <input type="text" id="sign-title" placeholder="Tour announcement photo" />
+      </div>
+      <div class="field">
+        <label>File <span style="color:#bbb">(JPEG · PNG · WebP · GIF · PDF)</span></label>
+        <div class="drop-zone" id="sign-dz">
+          <input type="file" id="sign-file"
+                 accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff,.pdf"
+                 onchange="onSignFile(this)" />
+          <div class="dz-label">Drop file here or click to browse</div>
+          <div class="dz-chosen" id="sign-chosen"></div>
+        </div>
+      </div>
+      <div class="error-msg" id="sign-err"></div>
+      <button class="btn btn-primary" id="sign-btn" onclick="doSign()" disabled style="margin-top:4px">
+        <span class="spinner" id="sign-spinner"></span>
+        <span>Fingerprint &amp; sign</span>
+      </button>
+
+      <div class="sign-result" id="sign-result">
+        <div class="kv"><span class="k">Fingerprint type</span><span class="v" id="sr-type"></span></div>
+        <div class="kv"><span class="k">Fingerprint</span><span class="v" id="sr-fp"></span></div>
+        <div class="kv"><span class="k">Registration ID</span><span class="v" id="sr-id"></span></div>
+        <a class="dl-assertion" id="dl-assertion" download="assertion.asc">⬇ Download signed assertion (.asc)</a>
+        <pre class="asc" id="sr-asc"></pre>
+      </div>
+    </div>
+
+    <div class="logout-link" onclick="logout()">Sign out</div>
+  </div>
+
+</div>
+
+<script>
+const API = "";
+let session = null;  // { creator_id, full_name, handle, pgp_fingerprint }
+
+function showState(name) {
+  ["landing","login","register","post-register","dashboard"]
+    .forEach(s => document.getElementById("state-" + s).style.display = "none");
+  document.getElementById("state-" + name).style.display = "";
+}
+
+function updateNav() {
+  const el = document.getElementById("nav-user");
+  if (session) {
+    el.innerHTML = `Signed in as <strong>${esc(session.full_name)}</strong>`;
+  } else {
+    el.innerHTML = "";
+  }
+}
+
+// ── Login ──
+function onLoginFile(input) {
+  if (input.files[0]) {
+    document.getElementById("login-chosen").textContent = input.files[0].name;
+    document.getElementById("login-btn").disabled = false;
+  }
+}
+
+async function doLogin() {
+  const fileInput = document.getElementById("login-key-file");
+  if (!fileInput.files[0]) return;
+
+  const btn     = document.getElementById("login-btn");
+  const spinner = document.getElementById("login-spinner");
+  const errEl   = document.getElementById("login-err");
+  btn.disabled = true; spinner.classList.add("show"); errEl.textContent = "";
+
+  const fd = new FormData();
+  fd.append("file", fileInput.files[0]);
+
+  try {
+    const res  = await fetch(`${API}/api/login`, { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Login failed.");
+    session = data;
+    updateNav();
+    showDashboard();
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; spinner.classList.remove("show");
+  }
+}
+
+// ── Register ──
+async function doRegister() {
+  const name   = document.getElementById("reg-name").value.trim();
+  const handle = document.getElementById("reg-handle").value.trim();
+  const errEl  = document.getElementById("reg-err");
+  if (!name) { errEl.textContent = "Full name is required."; return; }
+  errEl.textContent = "";
+
+  const btn     = document.getElementById("reg-btn");
+  const spinner = document.getElementById("reg-spinner");
+  btn.disabled = true; spinner.classList.add("show");
+
+  const fd = new FormData();
+  fd.append("full_name", name);
+  if (handle) fd.append("handle", handle);
+
+  try {
+    const res  = await fetch(`${API}/api/register`, { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Registration failed.");
+
+    session = { creator_id: data.creator_id, full_name: data.full_name,
+                handle: data.handle, pgp_fingerprint: data.pgp_fingerprint };
+    updateNav();
+
+    // Wire up downloads
+    const makeHref = (text) => URL.createObjectURL(new Blob([text], { type: "application/pgp-keys" }));
+    document.getElementById("dl-private").href = makeHref(data.private_key);
+    document.getElementById("dl-public").href  = makeHref(data.public_key);
+    document.getElementById("post-fp").innerHTML =
+      `<span>Fingerprint: ${esc(data.pgp_fingerprint)}</span>`;
+
+    showState("post-register");
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; spinner.classList.remove("show");
+  }
+}
+
+function goToDashboard() {
+  showDashboard();
+}
+
+// ── Dashboard ──
+function showDashboard() {
+  if (!session) return;
+  const initials = session.full_name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("dash-avatar").textContent  = initials;
+  document.getElementById("dash-name").textContent    = session.full_name;
+  document.getElementById("dash-handle").textContent  = session.handle || "";
+  document.getElementById("dash-fp").textContent      = "PGP: " + session.pgp_fingerprint;
+  showState("dashboard");
+}
+
+function onSignFile(input) {
+  if (input.files[0]) {
+    document.getElementById("sign-chosen").textContent = input.files[0].name;
+    document.getElementById("sign-btn").disabled = false;
+    document.getElementById("sign-result").classList.remove("show");
+  }
+}
+
+// drag-and-drop for sign
+const signDz = document.getElementById("sign-dz");
+signDz.addEventListener("dragover", e => { e.preventDefault(); signDz.classList.add("dragover"); });
+signDz.addEventListener("dragleave", () => signDz.classList.remove("dragover"));
+signDz.addEventListener("drop", e => {
+  e.preventDefault(); signDz.classList.remove("dragover");
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    const fi = document.getElementById("sign-file");
+    const dt = new DataTransfer(); dt.items.add(f); fi.files = dt.files;
+    onSignFile(fi);
+  }
+});
+
+async function doSign() {
+  if (!session) return;
+  const fileInput = document.getElementById("sign-file");
+  const title     = document.getElementById("sign-title").value.trim();
+  const errEl     = document.getElementById("sign-err");
+  if (!fileInput.files[0]) return;
+  errEl.textContent = "";
+
+  const btn     = document.getElementById("sign-btn");
+  const spinner = document.getElementById("sign-spinner");
+  btn.disabled = true; spinner.classList.add("show");
+
+  const fd = new FormData();
+  fd.append("creator_id", session.creator_id);
+  if (title) fd.append("title", title);
+  fd.append("file", fileInput.files[0]);
+
+  try {
+    const res  = await fetch(`${API}/api/register-content`, { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Signing failed.");
+
+    document.getElementById("sr-type").textContent = data.fingerprint_type;
+    document.getElementById("sr-fp").textContent   = data.fingerprint;
+    document.getElementById("sr-id").textContent   = data.registration_id;
+    document.getElementById("sr-asc").textContent  = data.signed_assertion;
+
+    const dlA = document.getElementById("dl-assertion");
+    dlA.href  = URL.createObjectURL(new Blob([data.signed_assertion], { type: "application/pgp-signature" }));
+
+    const sr = document.getElementById("sign-result");
+    sr.className = "sign-result show ok";
+  } catch (e) {
+    errEl.textContent = e.message;
+    document.getElementById("sign-result").className = "sign-result show err";
+    document.getElementById("sign-result").innerHTML = `<span style="color:#e05252">${esc(e.message)}</span>`;
+  } finally {
+    btn.disabled = false; spinner.classList.remove("show");
+  }
+}
+
+function logout() {
+  session = null;
+  updateNav();
+  // Clear all form fields
+  ["login-key-file","sign-file"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  ["login-chosen","sign-chosen","reg-name","reg-handle"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = el.value = "";
+  });
+  showState("landing");
+}
+
+function esc(s) {
+  return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// Init
+showState("landing");
+</script>
+</body>
+</html>
