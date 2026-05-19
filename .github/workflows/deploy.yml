@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 77.90.40.64
+          username: anish
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/anish/signing-poc
+            git pull origin main
+            /home/anish/.venv/signing-poc/bin/pip install -r backend/requirements.txt --quiet
+            sudo systemctl restart signing-poc-backend

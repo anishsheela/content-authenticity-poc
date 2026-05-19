@@ -219,6 +219,18 @@
 <script>
 const API = "";
 
+async function apiFetch(path, options) {
+  const res = await fetch(API + path, options);
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    const text = await res.text();
+    throw new Error(`Server error ${res.status}: ${text.slice(0, 120)}`);
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+  return data;
+}
+
 // ── Drag-and-drop ──
 const dz = document.getElementById("drop-zone");
 dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("dragover"); });
@@ -244,9 +256,7 @@ async function verify(file) {
   fd.append("file", file);
 
   try {
-    const res  = await fetch(`${API}/api/verify`, { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Verification failed.");
+    const data = await apiFetch("/api/verify", { method: "POST", body: fd });
     renderResult(data);
   } catch (e) {
     renderError(e.message);

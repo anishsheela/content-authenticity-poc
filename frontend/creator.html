@@ -430,6 +430,20 @@
 const API = "";
 let session = null;  // { creator_id, full_name, handle, pgp_fingerprint }
 
+async function apiFetch(path, options) {
+  const res = await fetch(API + path, options);
+  let data;
+  const ct = res.headers.get("content-type") || "";
+  if (ct.includes("application/json")) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    throw new Error(`Server error ${res.status}: ${text.slice(0, 120)}`);
+  }
+  if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+  return data;
+}
+
 function showState(name) {
   ["landing","login","register","post-register","dashboard"]
     .forEach(s => document.getElementById("state-" + s).style.display = "none");
@@ -466,9 +480,7 @@ async function doLogin() {
   fd.append("file", fileInput.files[0]);
 
   try {
-    const res  = await fetch(`${API}/api/login`, { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Login failed.");
+    const data = await apiFetch("/api/login", { method: "POST", body: fd });
     session = data;
     updateNav();
     showDashboard();
@@ -496,9 +508,7 @@ async function doRegister() {
   if (handle) fd.append("handle", handle);
 
   try {
-    const res  = await fetch(`${API}/api/register`, { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Registration failed.");
+    const data = await apiFetch("/api/register", { method: "POST", body: fd });
 
     session = { creator_id: data.creator_id, full_name: data.full_name,
                 handle: data.handle, pgp_fingerprint: data.pgp_fingerprint };
@@ -574,9 +584,7 @@ async function doSign() {
   fd.append("file", fileInput.files[0]);
 
   try {
-    const res  = await fetch(`${API}/api/register-content`, { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Signing failed.");
+    const data = await apiFetch("/api/register-content", { method: "POST", body: fd });
 
     document.getElementById("sr-type").textContent = data.fingerprint_type;
     document.getElementById("sr-fp").textContent   = data.fingerprint;
