@@ -278,7 +278,7 @@ function resetVerify() {
 // ── Render helpers ──
 const STATUS_MAP = {
   authentic:         { icon: "✅", text: "Authentic",        sub: "Matches the registered original exactly." },
-  possibly_modified: { icon: "⚠️", text: "Possibly altered", sub: "Similar to a registered original, but differences were detected." },
+  possibly_modified: { icon: "🚨", text: "Likely tampered", sub: "This file appears to have been modified from the original." },
   not_found:         { icon: "❌", text: "Not recognised",    sub: "No matching registered content found." },
   signature_invalid: { icon: "🚨", text: "Signature invalid", sub: "Content matched but the signature failed verification." },
 };
