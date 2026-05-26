@@ -76,7 +76,7 @@
       transition: border-color 0.25s, background 0.25s;
     }
     .card.authentic         { background: #e8f8ef; border-color: #2e8a50; }
-    .card.possibly_modified { background: #fff8e0; border-color: #c47d00; }
+    .card.possibly_modified { background: #fdecea; border-color: #c0392b; }
     .card.not_found         { background: #fdecea; border-color: #c0392b; }
     .card.signature_invalid { background: #fdecea; border-color: #c0392b; }
 
@@ -308,12 +308,15 @@ function renderResult(data) {
     if (data.registered_at) html += row("Registered", new Date(data.registered_at).toLocaleString());
     if (data.hamming_distance != null) {
       const pct = (data.similarity_score * 100).toFixed(1);
-      const cls = data.similarity_score >= 0.87 ? "badge-green" : "badge-yellow";
+      const isPossiblyModified = data.status === "possibly_modified";
+      const cls = (!isPossiblyModified && data.similarity_score >= 0.87) ? "badge-green" : "badge-yellow";
       html += row("Similarity", `<span class="badge ${cls}">${pct}% match</span> &nbsp;${data.hamming_distance}/64 bits differ`);
     }
-    html += row("Signature", data.signature_valid
-      ? '<span class="badge badge-green">✓ Valid</span>'
-      : '<span style="color:#c0392b;font-weight:700">✗ Invalid</span>');
+    if (data.status !== "possibly_modified") {
+      html += row("Signature", data.signature_valid
+        ? '<span class="badge badge-green">✓ Valid</span>'
+        : '<span style="color:#c0392b;font-weight:700">✗ Invalid</span>');
+    }
     if (data.signed_assertion) {
       html += `<div class="assertion-toggle" onclick="toggleAssertion()">Show signed assertion (GPG verifiable)</div>`;
       html += `<pre class="assertion" id="assertion-pre">${esc(data.signed_assertion)}</pre>`;
